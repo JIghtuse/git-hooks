@@ -1,0 +1,37 @@
+#!/bin/sh
+
+if git rev-parse --verify HEAD >/dev/null 2>&1
+then
+	against=HEAD
+else
+	# Initial commit: diff against an empty tree object
+	against=4b825dc642cb6eb9a060e54bf8d69288fbee4904
+fi
+
+retcode=0
+
+changed_files=$(git diff-index --cached $against | \
+    grep -E '[MA]	.*\.(c|cpp|cc|cxx)$' | cut -d'	' -f 2)
+
+if [ -n "$changed_files" ]; then
+    cppcheck --error-exitcode=1 $changed_files
+    retcode+=$?
+fi
+
+changed_files=$(git diff-index --cached $against | \
+    grep -E '[MA]	.*\.(sh|bash)$' | cut -d'	' -f 2)
+
+if [ -n "$changed_files" ]; then
+    shellcheck $changed_files
+    retcode+=$?
+fi
+
+changed_files=$(git diff-index --cached $against | \
+    grep -E '[MA]	.*\.(xml)$' | cut -d'	' -f 2)
+
+if [ -n "$changed_files" ]; then
+    xmllint --noout $changed_files
+    retcode+=$?
+fi
+
+exit "$retcode"
